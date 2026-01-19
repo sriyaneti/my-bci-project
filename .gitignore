@@ -1,0 +1,14 @@
+# Data & model artifacts (DO NOT COMMIT)
+data/raw/**
+data/hdf5_data_final/**
+models/pretrained/**
+
+# Binary files
+*.zip
+*.pkl
+
+# Python + OS noise
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+.DS_Store
