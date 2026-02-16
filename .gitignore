@@ -1,29 +1,29 @@
-# Data & model artifacts (DO NOT COMMIT large data/weights)
-data/raw/**
-data/hdf5_data_final/**
-models/pretrained/**
+# # Data & model artifacts (DO NOT COMMIT large data/weights)
+# data/raw/**
+# data/hdf5_data_final/**
+# models/pretrained/**
 
-# ✅ BUT allow lightweight config/code inside those ignored directories
-!data/raw/**/*.yaml
-!data/raw/**/*.yml
-!data/hdf5_data_final/**/*.yaml
-!data/hdf5_data_final/**/*.yml
-!models/pretrained/**/*.yaml
-!models/pretrained/**/*.yml
+# # ✅ BUT allow lightweight config/code inside those ignored directories
+# !data/raw/**/*.yaml
+# !data/raw/**/*.yml
+# !data/hdf5_data_final/**/*.yaml
+# !data/hdf5_data_final/**/*.yml
+# !models/pretrained/**/*.yaml
+# !models/pretrained/**/*.yml
 
-# If you also keep json/txt configs there, allow them too (optional)
-!data/raw/**/*.json
-!data/raw/**/*.txt
-!models/pretrained/**/*.json
-!models/pretrained/**/*.txt
+# # If you also keep json/txt configs there, allow them too (optional)
+# !data/raw/**/*.json
+# !data/raw/**/*.txt
+# !models/pretrained/**/*.json
+# !models/pretrained/**/*.txt
 
-# Binary files
-*.zip
-*.pkl
+# # Binary files
+# *.zip
+# *.pkl
 
-# Python + OS noise
-__pycache__/
-*.pyc
-.ipynb_checkpoints/
-.DS_Store
-external/
+# # Python + OS noise
+# __pycache__/
+# *.pyc
+# .ipynb_checkpoints/
+# .DS_Store
+# external/
