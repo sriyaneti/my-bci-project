@@ -1,3 +1,13 @@
+# HPO artifacts (hyperparameter optimization)
+hpo_runs/
+**/study.db
+**/runs/
+**/logs/
+*.pt
+*.pth
+*.ckpt
+wandb/
+
 # # Data & model artifacts (DO NOT COMMIT large data/weights)
 # data/raw/**
 # data/hdf5_data_final/**
