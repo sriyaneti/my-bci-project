@@ -23,7 +23,7 @@ import yaml
 
 def run_training_and_get_val_metric(cfg: dict, work_dir: Path) -> float:
     """
-    TODO: Replace this with your real training call.
+    TODO: Replace the code BELOW with your real training call.
     It MUST return one scalar validation metric (higher is better by default).
     """
     # Example stub (replace):
