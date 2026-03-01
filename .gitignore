@@ -1,3 +1,21 @@
+# Big artifacts of data (these exceed the github push allowed size)
+models/
+nejm_data/
+nejm_data_final/
+data/
+*.hdf5
+*.h5
+*.zip
+
+# Training outputs
+trained_models/
+hpo_runs/
+
+# Python cache
+**/__pycache__/
+*.pyc
+EOF
+
 # HPO artifacts (hyperparameter optimization)
 hpo_runs/
 **/study.db
