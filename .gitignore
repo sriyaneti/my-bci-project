@@ -55,3 +55,12 @@ wandb/
 # .ipynb_checkpoints/
 # .DS_Store
 # external/
+# Large artifacts
+models/
+nejm_data/
+nejm-brain-to-text/
+trained_models/
+hpo_runs/
+*.zip
+*.hdf5
+*.h5
