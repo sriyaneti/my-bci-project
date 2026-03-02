@@ -4,13 +4,18 @@ import json
 import os
 import subprocess
 from datetime import datetime
-from pathlib import Path
 
 import optuna
 import yaml
 
 
-def deep_update(base: dict, upd: dict) -> dict:
+def mkdir_p(directory):
+    """Equivalent to mkdir -p for Python 3.2"""
+    if not os.path.exists(directory):
+        os.makedirs(directory)
+
+
+def deep_update(base, upd):
     """Recursively updates nested dicts."""
     for k, v in upd.items():
         if isinstance(v, dict) and isinstance(base.get(k), dict):
@@ -19,11 +24,12 @@ def deep_update(base: dict, upd: dict) -> dict:
             base[k] = v
     return base
 
-"""
-This function defines the search space of which specific hyperparameters you are
-trying to optimize. It returns a nested dict that will be merged into base.yaml
-"""
-def sample_hparams(trial: optuna.Trial) -> dict:
+
+def sample_hparams(trial):
+    """
+    This function defines the search space of which specific hyperparameters you are
+    trying to optimize. It returns a nested dict that will be merged into base.yaml
+    """
     # Capacity / regularization
     n_units = trial.suggest_int("n_units", 384, 1024, step=128)
     rnn_dropout = trial.suggest_float("rnn_dropout", 0.0, 0.6)
@@ -49,11 +55,11 @@ def sample_hparams(trial: optuna.Trial) -> dict:
     }
 
 
-def objective(trial: optuna.Trial, base_cfg: dict, args) -> float:
+def objective(trial, base_cfg, args):
     # Create trial directory
     trial_name = f"trial_{trial.number:05d}"
-    trial_dir = Path(args.run_dir) / trial_name
-    trial_dir.mkdir(parents=True, exist_ok=True)
+    trial_dir = os.path.join(args.run_dir, trial_name)
+    mkdir_p(trial_dir)
 
     # Sample hyperparameters
     hparams_patch = sample_hparams(trial)
@@ -63,8 +69,8 @@ def objective(trial: optuna.Trial, base_cfg: dict, args) -> float:
     cfg = deep_update(cfg, hparams_patch)
 
     # Make outputs unique per trial to avoid overwriting between trials
-    cfg["output_dir"] = str(trial_dir / "model_out")
-    cfg["checkpoint_dir"] = str(trial_dir / "checkpoints")
+    cfg["output_dir"] = os.path.join(trial_dir, "model_out")
+    cfg["checkpoint_dir"] = os.path.join(trial_dir, "checkpoints")
 
     # Safety: don't accidentally load weights from some prior run
     cfg["init_from_checkpoint"] = False
@@ -75,47 +81,53 @@ def objective(trial: optuna.Trial, base_cfg: dict, args) -> float:
         cfg["seed"] = int(args.seed) + int(trial.number)
 
     # Write config.yaml
-    cfg_path = trial_dir / "config.yaml"
-    cfg_path.write_text(yaml.safe_dump(cfg, sort_keys=False))
+    cfg_path = os.path.join(trial_dir, "config.yaml")
+    with open(cfg_path, "w") as f:
+        f.write(yaml.safe_dump(cfg, sort_keys=False))
 
     # Build command to run train_one.py
     cmd = [
         args.python,
-        str(Path(args.train_one).resolve()),
-        "--config", str(cfg_path),
-        "--work_dir", str(trial_dir),
+        os.path.abspath(args.train_one),
+        "--config", cfg_path,
+        "--work_dir", trial_dir,
         "--metric_name", args.metric_name,
     ]
 
     # Save commands.json
     commands = {"cmd": cmd}
-    (trial_dir / "commands.json").write_text(json.dumps(commands, indent=2))
+    commands_path = os.path.join(trial_dir, "commands.json")
+    with open(commands_path, "w") as f:
+        f.write(json.dumps(commands, indent=2))
 
     # Run subprocess, capture stdout/stderr to stdout.txt
-    stdout_path = trial_dir / "stdout.txt"
+    stdout_path = os.path.join(trial_dir, "stdout.txt")
     with open(stdout_path, "w") as f:
-        proc = subprocess.run(
+        proc = subprocess.Popen(
             cmd,
             stdout=f,
             stderr=subprocess.STDOUT,
-            cwd=str(Path(args.project_root).resolve()),
+            cwd=os.path.abspath(args.project_root),
             env=os.environ.copy(),
-            text=True,
         )
+        proc.wait()
 
     if proc.returncode != 0:
         raise RuntimeError(f"train_one.py failed (returncode={proc.returncode}). See {stdout_path}")
 
     # Read metrics.json
-    metrics_path = trial_dir / "metrics.json"
-    if not metrics_path.exists():
+    metrics_path = os.path.join(trial_dir, "metrics.json")
+    if not os.path.exists(metrics_path):
         raise FileNotFoundError(f"{metrics_path} not found (train_one.py must write it).")
 
-    metrics = json.loads(metrics_path.read_text())
+    with open(metrics_path, "r") as f:
+        metrics = json.load(f)
+    
     if args.metric_name not in metrics:
         raise KeyError(f"'{args.metric_name}' not found in metrics.json. Keys: {list(metrics.keys())}")
 
     return float(metrics[args.metric_name])
+
 
 def main():
     ap = argparse.ArgumentParser()
@@ -124,7 +136,7 @@ def main():
     ap.add_argument("--run_dir", default="hpo_runs/run_" + datetime.now().strftime("%Y%m%d_%H%M%S"))
     ap.add_argument("--train_one", default="hpo_scripts/train_one.py")
     ap.add_argument("--python", default="python", help="Python executable to use")
-    ap.add_argument("--metric_name", default="val_score")
+    ap.add_argument("--metric_name", default="val_PERs")
     ap.add_argument("--direction", choices=["maximize", "minimize"], default="minimize")
     ap.add_argument("--n_trials", type=int, default=50)
     ap.add_argument("--seed", type=int, default=None)
@@ -132,15 +144,16 @@ def main():
     ap.add_argument("--storage", default=None, help="Optuna storage URL (e.g. sqlite:///.../study.db)")
     args = ap.parse_args()
 
-    project_root = Path(args.project_root).resolve()
-    run_dir = Path(args.run_dir).resolve()
-    run_dir.mkdir(parents=True, exist_ok=True)
+    project_root = os.path.abspath(args.project_root)
+    run_dir = os.path.abspath(args.run_dir)
+    mkdir_p(run_dir)
 
     # Load base config
-    base_cfg = yaml.safe_load(Path(args.base_config).read_text())
+    with open(args.base_config, "r") as f:
+        base_cfg = yaml.safe_load(f)
 
     # Default SQLite storage inside run_dir so you can resume
-    storage = args.storage or f"sqlite:///{(run_dir / 'optuna_study.db').as_posix()}"
+    storage = args.storage or "sqlite:///" + os.path.join(run_dir, 'optuna_study.db')
 
     study = optuna.create_study(
         study_name=args.study_name,
@@ -157,7 +170,9 @@ def main():
         "best_params": study.best_params,
         "best_trial_number": study.best_trial.number,
     }
-    (run_dir / "best.json").write_text(json.dumps(best, indent=2))
+    best_path = os.path.join(run_dir, "best.json")
+    with open(best_path, "w") as f:
+        f.write(json.dumps(best, indent=2))
     print(json.dumps(best, indent=2))
 
 
