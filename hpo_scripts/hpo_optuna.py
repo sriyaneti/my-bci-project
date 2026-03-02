@@ -152,6 +152,16 @@ def main():
     with open(args.base_config, "r") as f:
         base_cfg = yaml.safe_load(f)
 
+    # Resolve dataset_dir to absolute path now, relative to the base config location.
+    # If we leave it relative, it will be resolved against the trial directory later
+    # (wrong location) instead of the original config directory.
+    base_config_dir = os.path.dirname(os.path.abspath(args.base_config))
+    ds = base_cfg.get("dataset", {})
+    if isinstance(ds, dict) and isinstance(ds.get("dataset_dir"), str):
+        ds_dir = ds["dataset_dir"]
+        if not os.path.isabs(ds_dir):
+            ds["dataset_dir"] = os.path.normpath(os.path.join(base_config_dir, ds_dir))
+
     # Default SQLite storage inside run_dir so you can resume
     storage = args.storage or "sqlite:///" + os.path.join(run_dir, 'optuna_study.db')
 

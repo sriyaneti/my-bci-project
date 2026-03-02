@@ -3,6 +3,9 @@ set -euo pipefail
 
 PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
+# Override NEJM_ROOT if it is not a sibling of the project root (e.g. on the cluster)
+export NEJM_ROOT="${NEJM_ROOT:-${PROJECT_ROOT}/../nejm-brain-to-text}"
+
 PYTHON=${PYTHON:-python}
 
 RUN_DIR="${PROJECT_ROOT}/hpo_runs/run_$(date +%Y%m%d_%H%M%S)"
