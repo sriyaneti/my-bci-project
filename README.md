@@ -1,2 +1,2 @@
 # my-bci-project
-BCI project for Brain-to-Text competition
+Brain-to-Text 25' competition. Neural speech decoding in ALS.
