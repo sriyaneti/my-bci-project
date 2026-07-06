@@ -1,2 +1,2 @@
 # my-bci-project
-Brain-to-Text 25' competition. Neural speech decoding in ALS.
+Brain-to-Text 25' competition. Neural speech decoding in ALS. RNN model.
